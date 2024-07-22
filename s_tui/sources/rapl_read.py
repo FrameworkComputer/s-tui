@@ -25,7 +25,7 @@ import os
 import re
 from collections import namedtuple
 from multiprocessing import cpu_count
-from sys import byteorder
+from sys import byteorder, platform
 from s_tui.helper_functions import cat
 
 
@@ -39,11 +39,18 @@ CORE_MSR = 0xC001029A
 PACKAGE_MSR = 0xC001029B
 ENERGY_UNIT_MASK = 0x1F00
 
+sysctl_map = {
+    'package-0': 'package',
+    'core': 'pp0',
+    'uncore': 'pp1',
+    'psys': 'psys'
+}
+
 
 RaplStats = namedtuple("rapl", ["label", "current", "max"])
 
 
-class RaplReader:
+class LinuxRaplReader:
     def __init__(self):
         basenames = glob.glob("/sys/class/powercap/intel-rapl:*/")
         self.basenames = sorted(set({x for x in basenames}))
@@ -74,6 +81,36 @@ class RaplReader:
     @staticmethod
     def available():
         return os.path.exists("/sys/class/powercap/intel-rapl")
+
+
+class FreeBsdRaplReader:
+    def __init__(self):
+        # TODO: Enumerate those that are actually present
+        self.basenames = ['package-0', 'core', 'uncore', 'psys']
+
+    def read_power(self):
+        """Read power stats and return dictionary"""
+        from freebsd_sysctl import Sysctl
+
+        ret = list()
+        for name in self.basenames:
+            n = "dev." + sysctl_map[name] + "_uj"
+            # TODO: Skip if it doesn't exist
+            current = Sysctl(n).value
+            max_reading = 0.0
+            ret.append(RaplStats(name, float(current), max_reading))
+        return ret
+
+    @staticmethod
+    def available():
+        if not platform.startswith('freebsd'):
+            return False
+
+        # TODO: Check if the kernel has support
+        # from freebsd_sysctl import Sysctl
+        # Sysctl('package-0')
+
+        return True
 
 
 class AMDEnergyReader:
@@ -222,7 +259,7 @@ class AMDRaplMsrReader:
 
 
 def get_power_reader():
-    for ReaderType in (RaplReader, AMDEnergyReader, AMDRaplMsrReader):
+    for ReaderType in (LinuxRaplReader, FreeBsdRaplReader, AMDEnergyReader, AMDRaplMsrReader):
         if ReaderType.available():
             return ReaderType()
     return None

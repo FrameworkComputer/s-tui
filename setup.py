@@ -42,5 +42,6 @@ setup(
     install_requires=[
         "urwid>=2.0.1",
         "psutil>=5.9.1",
+        "freebsd-sysctl>=0.0.7",
     ],
 )
