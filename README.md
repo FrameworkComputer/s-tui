@@ -270,3 +270,24 @@ If you like this work, please star it on GitHub.
 
 BTC: `1PPhYgecwvAN7utN2EotgTfy2mmLqzF8m3`  
 ETH: `0xc169699A825066f2F07E0b29C4082094b32A3F3e`
+
+
+
+```
+# Build and load kernel module
+git clone https://github.com/FrameworkComputer/freebsd-src \
+  --history 1 \
+  --branch intel_rapl
+cd sys/dev/intel_rapl
+# cd sys/modules/intel_rapl
+make
+sudo make load
+
+# Install python deps
+python3 -m venv venv
+source venv/bin/activate.fish
+python -m pip install freebsd_sysctl psutil urwid
+
+# Launch it
+sudo -E python -m s_tui.s_tui
+```
